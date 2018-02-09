@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Standalone utility for assessing Node app compatibility with Contrast",
   "main": "index.js",
+  "engines": { "node": ">=4" },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
