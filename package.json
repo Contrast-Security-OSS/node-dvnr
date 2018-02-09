@@ -1,0 +1,22 @@
+{
+  "name": "contrast-dvnr",
+  "version": "1.0.0",
+  "description": "Standalone utility for assessing Node app compatibility with Contrast",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Contrast-Security-OSS/node-dvnr.git"
+  },
+  "keywords": [
+    "contrast"
+  ],
+  "author": "Contrast Security",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Contrast-Security-OSS/node-dvnr/issues"
+  },
+  "homepage": "https://github.com/Contrast-Security-OSS/node-dvnr#readme"
+}
