@@ -1,6 +1,6 @@
 {
-  "name": "contrast-dvnr",
-  "version": "1.0.0",
+  "name": "contrast-nvnr",
+  "version": "0.0.1",
   "description": "Standalone utility for assessing Node app compatibility with Contrast",
   "main": "index.js",
   "scripts": {
