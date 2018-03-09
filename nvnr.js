@@ -2,39 +2,122 @@
 'use strict';
 const os = require('os');
 const Section = require('./section.js');
-
+const colors = require('./colors');
 const readBinding = require('./addons.js').readBinding;
+const _ = require('lodash');
 
-const deps = {
-	http: [
-		/express/, // add ways to find middleware (tab indented)
-		/hapi/, // add way to add plugins (glue, joi, vision, etc.) (tab indented)
-		/sails/,
-		/koa/,
-		/meteor/,
-	],
-	db: [
-		/mysql/,
-		/sqlite/,
-		/mongo/,
-		/redis/,
-	],
-	template: [],
-	log: [],
+function capitalizeFirstLetter(string) {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
-	test: [],
-	runners: [],
-	transpilers: []
+const loggingModules = [
+	'bunyan',
+	'log4js',
+	'winston'];
+
+const httpFrameWorks = [
+	'connect',
+	'express',
+	'hapi',
+	'koa',
+	'meteor',
+	'react',
+	'sails'];
+
+const testFrameworks = [
+	'chai',
+	'espresso',
+	'jasmine-core',
+	'jasmine-node',
+	'jest',
+	'jsunit',
+	'mocha',
+	'nodeunit',
+	'should',
+	'vows'];
+
+const daemonRunners = [
+	'forever',
+	'nodemon',
+	'pm2',
+	'supervisor'];
+
+const taskRunners = [
+	'ant',
+	'grunt',
+	'gulp'];
+
+const templateEngines = [
+	'ejs',
+	'handlebars',
+	'jade',
+	'pug',
+	'swig'];
+
+const transpilers = [
+	'babel',
+	'coffeescript',
+	'coffee-script',
+	'typescript',
+	'standard'];
+
+const databases = [
+	'marsdb',
+	'mongodb',
+	'mysql',
+	'redis',
+	'sequelize',
+	'sqllite3',
+	'sqllite'];
+
+const miscModules = [
+	'async',
+	'axios',
+	'bluebird',
+	'chalk',
+	'cheerio',
+	'commander',
+	'jquery',
+	'lodash',
+	'moment',
+	'multer',
+	'notevil',
+	'nyc',
+	'request',
+	'rxjs',
+	'through2',
+	'underscore',
+	'webpack',
+	'yargs'];
+
+const all_sections = {
+	'HTTP Frameworks': httpFrameWorks,
+	'Testing Frameworks': testFrameworks,
+	'Daemon Runners': daemonRunners,
+	'Task Runners': taskRunners,
+	'Template Engines': templateEngines,
+	'Transpilers': transpilers,
+	'Databases': databases,
+	'Logging': loggingModules,
+	'Misc': miscModules
 };
 
-function banner () {
+
+
+function to_regex_map(strings) {
+	return strings.map(s =>new RegExp(`\"${s}\"`, 'i'));
+}
+
+
+
+function banner() {
 	const reportDate = (new Date()).toString();
-	// console.log(colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)'));
+	console.log(colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)'));
 	console.log(reportDate);
 	console.log();
 }
 
-function printSystemInfo () {
+function printSystemInfo() {
 	const sysInfo = new Section('General Info');
 
 	const platform = `${process.platform} ${os.release()}`;
@@ -54,6 +137,7 @@ function printSystemInfo () {
 	sysInfo.addData('os', `${platform}, ${arch}`);
 	sysInfo.addData('node', nodeVersion);
 	sysInfo.addData('mem', totalgb);
+	sysInfo.addData('cwd', process.env.PWD);
 
 	const cpuInfo = new Section('cpu');
 	cpuInfo.addData('model', cpuModel);
@@ -61,73 +145,66 @@ function printSystemInfo () {
 	cpuInfo.addData('speed', cpuSpeed);
 	sysInfo.addData(cpuInfo);
 
-	// sysInfo.addData('os', `${platform}, ${arch}`);
-	// console.log(`  os   ${platform}, ${arch}`);
-	// console.log(`  node ${nodeVersion}`);
-	// console.log(`  mem  ${totalgb}gb`);
-
-	// sysInfo.addSection
-	// console.log('  cpu');
-	// console.log(`    model ${cpuModel}`);
-	// console.log(`    cores ${cpuCores}`);
-	// console.log(`    speed ${cpuSpeed}`);
-
 	if (env) {
 		sysInfo.addData('env', env);
-		// console.log(`  env  ${env}`);
 	}
 
 	sysInfo.print();
 }
 
-function http (pkg) {
-	// sectionHeader('Application Framework(s) and Utilities Used:');
 
-	// console.log();
-}
+function printSection(sectionTitle, dependencies, devDependencies, search_map) {
+	const section = new Section(sectionTitle);
 
-function db (pkg) {
-	// sectionHeader('Databases/ORMs Used:');
+	let dependenciesString = JSON.stringify(dependencies);
+	let devDependenciesString = JSON.stringify(devDependencies);
 
-	// console.log();
-}
+	search_map.forEach( (frameworkRegExp) => {
+		if (dependenciesString.search(frameworkRegExp) !== -1 || devDependenciesString.search(frameworkRegExp) !== -1)  {
+			let framework = frameworkRegExp.toString().replace(/"/g, '', ).replace('/i','').replace(/\//g, '');
+			section.addData(capitalizeFirstLetter(framework), _.get(dependencies, framework, _.get(devDependencies, framework, 'Unknown')));
+		}
 
-// misc: request.js, bluebird, etc
-function misc (pkg) {
-	// sectionHeader('Other:');
+	});
 
-	// console.log();
-}
-
-function addons () {
-	// sectionHeader('C++ Addons:');
-
-	// readBinding((err, data) => {
-	// 	if (err) {
-	// 		console.log('  No binding.gyp found.');
-	// 	}
-
-	// 	console.log();
-	// });
+	section.print();
 
 }
 
-function main () {
+
+function addons() {
+    // sectionHeader('C++ Addons:');
+
+    // readBinding((err, data) => {
+    // 	if (err) {
+    // 		console.log('  No binding.gyp found.');
+    // 	}
+
+    // 	console.log();
+    // });
+
+}
+
+
+function main() {
 	banner();
 	printSystemInfo();
-
 	var pkg;
 	try {
-		pkg = require('./package.json');
+		pkg = require(process.env.PWD + '/package.json');
 	} catch (e) {
 		console.log('Could not read package.json. To fully check compatibility, make sure to run nvnr in the same directory as your application\'s package.json.');
 	}
 
-	// if (pkg) {
-	// 	httpFrameworks(pkg);
-	// 	databases(pkg);
-	// 	misc(pkg);
-	// }
+	if (pkg) {
+
+		let dependencies = _.get(pkg, 'dependencies', _.get(pkg, 'Dependencies', ''));
+		let devDependencies = _.get(pkg, 'devDependencies', _.get(pkg, 'devdependencies', ''));
+
+		for(let section in all_sections) {
+		    printSection(section, dependencies, devDependencies, to_regex_map(all_sections[section]));
+		}
+	}
 
 	addons();
 }
