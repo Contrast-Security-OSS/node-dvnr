@@ -13,15 +13,18 @@ function capitalizeFirstLetter(string) {
 const loggingModules = [
 	'bunyan',
 	'log4js',
+	'morgan',
 	'winston'];
 
 const httpFrameWorks = [
+	'angular',
 	'connect',
 	'express',
 	'hapi',
 	'koa',
 	'meteor',
 	'react',
+	'redux',
 	'sails'];
 
 const testFrameworks = [
@@ -69,11 +72,12 @@ const transpilers = [
 const databases = [
 	'marsdb',
 	'mongodb',
+	'mongoose',
 	'mysql',
 	'redis',
 	'sequelize',
-	'sqllite3',
-	'sqllite'];
+	'sqlite3',
+	'sqlite'];
 
 const miscModules = [
 	'async',
@@ -88,6 +92,7 @@ const miscModules = [
 	'multer',
 	'notevil',
 	'nyc',
+	'passport',
 	'request',
 	'rxjs',
 	'through2',
