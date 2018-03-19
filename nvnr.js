@@ -178,10 +178,13 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 
 function addons() {
 	const section = new Section('Custom Addons (C++/V8)');
+	try {
+        let data = fs.readFileSync('binding.gyp');
+        if (data != null) {
+            section.addData('Binding.gyp', data.toString());
+        }
+    } catch(e) { // probably file not found...
 
-	let data = fs.readFileSync('binding.gyp');
-	if (data != null) {
-		section.addData('Binding.gyp', data.toString());
 	}
 
 	section.print();
