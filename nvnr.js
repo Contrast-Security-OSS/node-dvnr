@@ -3,8 +3,8 @@
 const os = require('os');
 const Section = require('./section.js');
 const colors = require('./colors');
-const readBinding = require('./addons.js').readBinding;
 const _ = require('lodash');
+const fs = require('fs');
 
 function capitalizeFirstLetter(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
@@ -13,15 +13,18 @@ function capitalizeFirstLetter(string) {
 const loggingModules = [
 	'bunyan',
 	'log4js',
+	'morgan',
 	'winston'];
 
 const httpFrameWorks = [
+	'angular',
 	'connect',
 	'express',
 	'hapi',
 	'koa',
 	'meteor',
 	'react',
+	'redux',
 	'sails'];
 
 const testFrameworks = [
@@ -54,6 +57,11 @@ const templateEngines = [
 	'pug',
 	'swig'];
 
+const harmony = [
+	'harmony',
+	'node-harmony'
+];
+
 const transpilers = [
 	'babel',
 	'coffeescript',
@@ -64,11 +72,12 @@ const transpilers = [
 const databases = [
 	'marsdb',
 	'mongodb',
+	'mongoose',
 	'mysql',
 	'redis',
 	'sequelize',
-	'sqllite3',
-	'sqllite'];
+	'sqlite3',
+	'sqlite'];
 
 const miscModules = [
 	'async',
@@ -83,6 +92,7 @@ const miscModules = [
 	'multer',
 	'notevil',
 	'nyc',
+	'passport',
 	'request',
 	'rxjs',
 	'through2',
@@ -96,18 +106,17 @@ const all_sections = {
 	'Daemon Runners': daemonRunners,
 	'Task Runners': taskRunners,
 	'Template Engines': templateEngines,
-	'Transpilers': transpilers,
-	'Databases': databases,
 	'Logging': loggingModules,
+	'Transpilers': transpilers,
+	'ES6 Harmony' : harmony,
+	'Databases': databases,
 	'Misc': miscModules
 };
 
 
-
 function to_regex_map(strings) {
-	return strings.map(s =>new RegExp(`\"${s}\"`, 'i'));
+	return strings.map(s => new RegExp(`\"${s}\"`, 'i'));
 }
-
 
 
 function banner() {
@@ -159,9 +168,9 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 	let dependenciesString = JSON.stringify(dependencies);
 	let devDependenciesString = JSON.stringify(devDependencies);
 
-	search_map.forEach( (frameworkRegExp) => {
-		if (dependenciesString.search(frameworkRegExp) !== -1 || devDependenciesString.search(frameworkRegExp) !== -1)  {
-			let framework = frameworkRegExp.toString().replace(/"/g, '', ).replace('/i','').replace(/\//g, '');
+	search_map.forEach((frameworkRegExp) => {
+		if (dependenciesString.search(frameworkRegExp) !== -1 || devDependenciesString.search(frameworkRegExp) !== -1) {
+			let framework = frameworkRegExp.toString().replace(/"/g, '',).replace('/i', '').replace(/\//g, '');
 			section.addData(capitalizeFirstLetter(framework), _.get(dependencies, framework, _.get(devDependencies, framework, 'Unknown')));
 		}
 
@@ -173,16 +182,17 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 
 
 function addons() {
-    // sectionHeader('C++ Addons:');
+	const section = new Section('Custom Addons (C++/V8)');
+	try {
+        let data = fs.readFileSync('binding.gyp');
+        if (data != null) {
+            section.addData('Binding.gyp', data.toString());
+        }
+    } catch(e) { // probably file not found...
 
-    // readBinding((err, data) => {
-    // 	if (err) {
-    // 		console.log('  No binding.gyp found.');
-    // 	}
+	}
 
-    // 	console.log();
-    // });
-
+	section.print();
 }
 
 
@@ -201,8 +211,8 @@ function main() {
 		let dependencies = _.get(pkg, 'dependencies', _.get(pkg, 'Dependencies', ''));
 		let devDependencies = _.get(pkg, 'devDependencies', _.get(pkg, 'devdependencies', ''));
 
-		for(let section in all_sections) {
-		    printSection(section, dependencies, devDependencies, to_regex_map(all_sections[section]));
+		for (let section in all_sections) {
+			printSection(section, dependencies, devDependencies, to_regex_map(all_sections[section]));
 		}
 	}
 
