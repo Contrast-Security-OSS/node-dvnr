@@ -115,7 +115,7 @@ const all_sections = {
 
 
 function to_regex_map(strings) {
-	return strings.map(s => new RegExp(`\"${s}\"`, 'i'));
+	return strings.map(s => new RegExp(`${s}`, 'i'));
 }
 
 
@@ -165,15 +165,25 @@ function printSystemInfo() {
 function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 	const section = new Section(sectionTitle);
 
-	let dependenciesString = JSON.stringify(dependencies);
-	let devDependenciesString = JSON.stringify(devDependencies);
+	//let dependenciesString = JSON.stringify(dependencies);
+	//let devDependenciesString = JSON.stringify(devDependencies);
+	//_.forIn
+
+
 
 	search_map.forEach((frameworkRegExp) => {
-		if (dependenciesString.search(frameworkRegExp) !== -1 || devDependenciesString.search(frameworkRegExp) !== -1) {
-			let framework = frameworkRegExp.toString().replace(/"/g, '',).replace('/i', '').replace(/\//g, '');
-			section.addData(capitalizeFirstLetter(framework), _.get(dependencies, framework, _.get(devDependencies, framework, 'Unknown')));
-		}
 
+		_.forIn(dependencies, (value, key) => {
+			if(key.search(frameworkRegExp) !== -1) {
+				section.addData(capitalizeFirstLetter(key), value);
+        	}
+		});
+
+		_.forIn(devDependencies, (value, key) => {
+			if(key.search(frameworkRegExp) !== -1) {
+				section.addData(capitalizeFirstLetter(key), value);
+			}
+		});
 	});
 
 	section.print();
@@ -184,11 +194,11 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 function addons() {
 	const section = new Section('Custom Addons (C++/V8)');
 	try {
-        let data = fs.readFileSync('binding.gyp');
-        if (data != null) {
-            section.addData('Binding.gyp', data.toString());
-        }
-    } catch(e) { // probably file not found...
+		let data = fs.readFileSync('binding.gyp');
+		if (data != null) {
+			section.addData('Binding.gyp', data.toString());
+		}
+	} catch(e) { // probably file not found...
 
 	}
 
