@@ -72,6 +72,7 @@ const miscModules = [
   'chalk',
   'cheerio',
   'commander',
+  'joi',
   'jquery',
   'lodash',
   'moment',
