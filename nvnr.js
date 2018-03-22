@@ -76,7 +76,6 @@ const databases = [
 	'mysql',
 	'redis',
 	'sequelize',
-	'sqlite3',
 	'sqlite'];
 
 const miscModules = [
