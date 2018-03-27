@@ -55,15 +55,13 @@ const transpilers = [
 ];
 
 const databases = [
-  'marsdb',
-  'mongodb',
-  'mongoose',
-  'mysql',
-  'redis',
-  'sequelize',
-  'sqlite3',
-  'sqlite'
-];
+	'marsdb',
+	'mongodb',
+	'mongoose',
+	'mysql',
+	'redis',
+	'sequelize',
+	'sqlite'];
 
 const miscModules = [
   'async',
