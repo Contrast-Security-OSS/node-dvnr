@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/Contrast-Security-OSS/node-dvnr/issues"
   },
-  "homepage": "https://github.com/Contrast-Security-OSS/node-dvnr#readme"
+  "homepage": "https://github.com/Contrast-Security-OSS/node-dvnr#readme",
+  "dependencies": {
+    "lodash": "4.17.5"
+  }
 }
