@@ -150,23 +150,48 @@ function printSystemInfo() {
   sysInfo.print();
 }
 
-function printSection(sectionTitle, dependencies, devDependencies, search_map) {
+function printSection(
+  sectionTitle,
+  dependencies,
+  devDependencies,
+  nodeModuleList,
+  search_map
+) {
   const section = new Section(sectionTitle);
+
+  let seen = [];
 
   search_map.forEach(frameworkRegExp => {
     _.forIn(dependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
-        section.addData(capitalizeFirstLetter(key), value);
-        let path = GetInstallPath.getInstalledPathSync(key, { local: true });
-        findModuleDeps(section, key, path);
+        let moduleName = capitalizeFirstLetter(key);
+        section.addData(moduleName, value);
+        let path = GetInstallPath.getInstalledPathSync(moduleName, {
+          local: true
+        });
+        findModuleDeps(section, moduleName, path);
+        seen.push(moduleName);
       }
     });
 
     _.forIn(devDependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
-        section.addData(capitalizeFirstLetter(key), value);
-        let path = GetInstallPath.getInstalledPathSync(key, { local: true });
-        findModuleDeps(section, key, path);
+        let moduleName = capitalizeFirstLetter(key);
+        section.addData(moduleName, value);
+        let path = GetInstallPath.getInstalledPathSync(moduleName, {
+          local: true
+        });
+        findModuleDeps(section, moduleName, path);
+        seen.push(moduleName);
+      }
+    });
+
+    _.forIn(nodeModuleList, key => {
+      if (key.search(frameworkRegExp) !== -1) {
+        let moduleName = capitalizeFirstLetter(key);
+        if (!seen.includes(moduleName)) {
+          section.addData(moduleName, '(Found in /node_modules)');
+        }
       }
     });
   });
@@ -175,29 +200,33 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 }
 
 function findModuleDeps(section, module, path) {
-  let depsSection = new Section(`${module} Deps`);
-  let modulePkg = require(path + '/package.json');
-  if (modulePkg) {
-    let dependencies = _.get(
-      modulePkg,
-      'dependencies',
-      _.get(modulePkg, 'Dependencies', '')
-    );
-    let devDependencies = _.get(
-      modulePkg,
-      'devDependencies',
-      _.get(modulePkg, 'devdependencies', '')
-    );
+  try {
+    let depsSection = new Section(`${module} Deps`);
+    let modulePkg = require(path + '/package.json');
+    if (modulePkg) {
+      let dependencies = _.get(
+        modulePkg,
+        'dependencies',
+        _.get(modulePkg, 'Dependencies', '')
+      );
+      let devDependencies = _.get(
+        modulePkg,
+        'devDependencies',
+        _.get(modulePkg, 'devdependencies', '')
+      );
 
-    _.forIn(dependencies, (value, key) => {
-      depsSection.addData(capitalizeFirstLetter(key), value);
-    });
+      _.forIn(dependencies, (value, key) => {
+        depsSection.addData(capitalizeFirstLetter(key), value);
+      });
 
-    _.forIn(devDependencies, (value, key) => {
-      depsSection.addData(capitalizeFirstLetter(key), value);
-    });
+      _.forIn(devDependencies, (value, key) => {
+        depsSection.addData(capitalizeFirstLetter(key), value);
+      });
 
-    section.addData(depsSection);
+      section.addData(depsSection);
+    }
+  } catch (e) {
+    // do nothing if we can't find the deps
   }
 }
 
@@ -215,15 +244,16 @@ function addons() {
   section.print();
 }
 
-function NodeModulesList() {
+function getNodeModulesDirNames() {
   let nodeModulesPath = path.join(process.env.PWD, '/node_modules');
   if (fs.existsSync(nodeModulesPath)) {
-    const section = new Section('Node Modules List');
+    let modulesNames = [];
     fs.readdirSync(nodeModulesPath).forEach(file => {
-      section.addData('has', file);
+      modulesNames.push(file);
     });
-    section.print();
+    return modulesNames;
   }
+  return [];
 }
 
 function main() {
@@ -250,16 +280,18 @@ function main() {
       _.get(pkg, 'devdependencies', '')
     );
 
+    let nodeModuleList = getNodeModulesDirNames();
+
     for (let section in all_sections) {
       printSection(
         section,
         dependencies,
         devDependencies,
+        nodeModuleList,
         to_regex_map(all_sections[section])
       );
     }
     addons();
-    NodeModulesList();
 
     if (fs.existsSync(`nvnr-${file_ts}.txt`)) {
       console.log(`\nWrote nvnr-${file_ts}.txt to ${process.env.PWD}`);
