@@ -115,7 +115,6 @@ function banner() {
   console.log(colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)'));
   console.log(reportDate);
   console.log();
-  console.log('**Common Modules List**');
 }
 
 function printSystemInfo() {
