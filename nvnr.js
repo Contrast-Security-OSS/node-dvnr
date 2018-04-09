@@ -40,6 +40,8 @@ const testFrameworks = [
   'vows'
 ];
 
+const cms = ['apostrophe'];
+
 const daemonRunners = ['forever', 'nodemon', 'pm2', 'supervisor'];
 
 const taskRunners = ['ant', 'grunt', 'gulp'];
@@ -92,6 +94,7 @@ const miscModules = [
 
 const all_sections = {
   'HTTP Frameworks': httpFrameWorks,
+  CMS: cms,
   'Testing Frameworks': testFrameworks,
   'Daemon Runners': daemonRunners,
   'Task Runners': taskRunners,
@@ -166,9 +169,12 @@ function printSection(
       if (key.search(frameworkRegExp) !== -1) {
         let moduleName = capitalizeFirstLetter(key);
         section.addData(moduleName, value);
-        let path = GetInstallPath.getInstalledPathSync(moduleName, {
-          local: true
-        });
+        let path = GetInstallPath.getInstalledPathSync(
+          moduleName.toLowerCase(),
+          {
+            local: true
+          }
+        );
         findModuleDeps(section, moduleName, path);
         seen.push(moduleName);
       }
@@ -178,9 +184,12 @@ function printSection(
       if (key.search(frameworkRegExp) !== -1) {
         let moduleName = capitalizeFirstLetter(key);
         section.addData(moduleName, value);
-        let path = GetInstallPath.getInstalledPathSync(moduleName, {
-          local: true
-        });
+        let path = GetInstallPath.getInstalledPathSync(
+          moduleName.toLowerCase(),
+          {
+            local: true
+          }
+        );
         findModuleDeps(section, moduleName, path);
         seen.push(moduleName);
       }
