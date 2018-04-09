@@ -6,7 +6,8 @@ const file_ts = require('./section.js').file_ts;
 const colors = require('./colors');
 const _ = require('lodash');
 const fs = require('fs');
-const { getInstalledPathSync } = require('get-installed-path');
+const GetInstallPath = require('get-installed-path');
+const path = require('path');
 
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -111,6 +112,7 @@ function banner() {
   console.log(colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)'));
   console.log(reportDate);
   console.log();
+  console.log('**Common Modules List**');
 }
 
 function printSystemInfo() {
@@ -155,7 +157,7 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
     _.forIn(dependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
         section.addData(capitalizeFirstLetter(key), value);
-        let path = getInstalledPathSync(key, { local: true });
+        let path = GetInstallPath.getInstalledPathSync(key, { local: true });
         findModuleDeps(section, key, path);
       }
     });
@@ -163,7 +165,7 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
     _.forIn(devDependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
         section.addData(capitalizeFirstLetter(key), value);
-        let path = getInstalledPathSync(key, { local: true });
+        let path = GetInstallPath.getInstalledPathSync(key, { local: true });
         findModuleDeps(section, key, path);
       }
     });
@@ -213,6 +215,17 @@ function addons() {
   section.print();
 }
 
+function NodeModulesList() {
+  let nodeModulesPath = path.join(process.env.PWD, '/node_modules');
+  if (fs.existsSync(nodeModulesPath)) {
+    const section = new Section('Node Modules List');
+    fs.readdirSync(nodeModulesPath).forEach(file => {
+      section.addData('has', file);
+    });
+    section.print();
+  }
+}
+
 function main() {
   banner();
   printSystemInfo();
@@ -246,6 +259,7 @@ function main() {
       );
     }
     addons();
+    NodeModulesList();
 
     if (fs.existsSync(`nvnr-${file_ts}.txt`)) {
       console.log(`\nWrote nvnr-${file_ts}.txt to ${process.env.PWD}`);
