@@ -6,6 +6,7 @@ const file_ts = require('./section.js').file_ts;
 const colors = require('./colors');
 const _ = require('lodash');
 const fs = require('fs');
+const { getInstalledPathSync } = require('get-installed-path');
 
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -55,13 +56,14 @@ const transpilers = [
 ];
 
 const databases = [
-	'marsdb',
-	'mongodb',
-	'mongoose',
-	'mysql',
-	'redis',
-	'sequelize',
-	'sqlite'];
+  'marsdb',
+  'mongodb',
+  'mongoose',
+  'mysql',
+  'redis',
+  'sequelize',
+  'sqlite'
+];
 
 const miscModules = [
   'async',
@@ -83,7 +85,8 @@ const miscModules = [
   'through2',
   'underscore',
   'webpack',
-  'yargs'
+  'yargs',
+  'loopback'
 ];
 
 const all_sections = {
@@ -152,17 +155,48 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
     _.forIn(dependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
         section.addData(capitalizeFirstLetter(key), value);
+        let path = getInstalledPathSync(key, { local: true });
+        findModuleDeps(section, key, path);
       }
     });
 
     _.forIn(devDependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
         section.addData(capitalizeFirstLetter(key), value);
+        let path = getInstalledPathSync(key, { local: true });
+        findModuleDeps(section, key, path);
       }
     });
   });
 
   section.print();
+}
+
+function findModuleDeps(section, module, path) {
+  let depsSection = new Section(`${module} Deps`);
+  let modulePkg = require(path + '/package.json');
+  if (modulePkg) {
+    let dependencies = _.get(
+      modulePkg,
+      'dependencies',
+      _.get(modulePkg, 'Dependencies', '')
+    );
+    let devDependencies = _.get(
+      modulePkg,
+      'devDependencies',
+      _.get(modulePkg, 'devdependencies', '')
+    );
+
+    _.forIn(dependencies, (value, key) => {
+      depsSection.addData(capitalizeFirstLetter(key), value);
+    });
+
+    _.forIn(devDependencies, (value, key) => {
+      depsSection.addData(capitalizeFirstLetter(key), value);
+    });
+
+    section.addData(depsSection);
+  }
 }
 
 function addons() {
