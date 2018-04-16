@@ -6,7 +6,8 @@ const file_ts = require('./section.js').file_ts;
 const colors = require('./colors');
 const _ = require('lodash');
 const fs = require('fs');
-const { getInstalledPathSync } = require('get-installed-path');
+const GetInstallPath = require('get-installed-path');
+const path = require('path');
 
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -38,6 +39,8 @@ const testFrameworks = [
   'should',
   'vows'
 ];
+
+const cms = ['apostrophe'];
 
 const daemonRunners = ['forever', 'nodemon', 'pm2', 'supervisor'];
 
@@ -91,6 +94,7 @@ const miscModules = [
 
 const all_sections = {
   'HTTP Frameworks': httpFrameWorks,
+  CMS: cms,
   'Testing Frameworks': testFrameworks,
   'Daemon Runners': daemonRunners,
   'Task Runners': taskRunners,
@@ -148,23 +152,54 @@ function printSystemInfo() {
   sysInfo.print();
 }
 
-function printSection(sectionTitle, dependencies, devDependencies, search_map) {
+function printSection(
+  sectionTitle,
+  dependencies,
+  devDependencies,
+  nodeModuleList,
+  search_map
+) {
   const section = new Section(sectionTitle);
+
+  let seen = [];
 
   search_map.forEach(frameworkRegExp => {
     _.forIn(dependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
-        section.addData(capitalizeFirstLetter(key), value);
-        let path = getInstalledPathSync(key, { local: true });
-        findModuleDeps(section, key, path);
+        let moduleName = capitalizeFirstLetter(key);
+        section.addData(moduleName, value);
+        let path = GetInstallPath.getInstalledPathSync(
+          moduleName.toLowerCase(),
+          {
+            local: true
+          }
+        );
+        findModuleDeps(section, moduleName, path);
+        seen.push(moduleName);
       }
     });
 
     _.forIn(devDependencies, (value, key) => {
       if (key.search(frameworkRegExp) !== -1) {
-        section.addData(capitalizeFirstLetter(key), value);
-        let path = getInstalledPathSync(key, { local: true });
-        findModuleDeps(section, key, path);
+        let moduleName = capitalizeFirstLetter(key);
+        section.addData(moduleName, value);
+        let path = GetInstallPath.getInstalledPathSync(
+          moduleName.toLowerCase(),
+          {
+            local: true
+          }
+        );
+        findModuleDeps(section, moduleName, path);
+        seen.push(moduleName);
+      }
+    });
+
+    _.forIn(nodeModuleList, key => {
+      if (key.search(frameworkRegExp) !== -1) {
+        let moduleName = capitalizeFirstLetter(key);
+        if (!seen.includes(moduleName)) {
+          section.addData(moduleName, '(Found in /node_modules)');
+        }
       }
     });
   });
@@ -173,29 +208,33 @@ function printSection(sectionTitle, dependencies, devDependencies, search_map) {
 }
 
 function findModuleDeps(section, module, path) {
-  let depsSection = new Section(`${module} Deps`);
-  let modulePkg = require(path + '/package.json');
-  if (modulePkg) {
-    let dependencies = _.get(
-      modulePkg,
-      'dependencies',
-      _.get(modulePkg, 'Dependencies', '')
-    );
-    let devDependencies = _.get(
-      modulePkg,
-      'devDependencies',
-      _.get(modulePkg, 'devdependencies', '')
-    );
+  try {
+    let depsSection = new Section(`${module} Deps`);
+    let modulePkg = require(path + '/package.json');
+    if (modulePkg) {
+      let dependencies = _.get(
+        modulePkg,
+        'dependencies',
+        _.get(modulePkg, 'Dependencies', '')
+      );
+      let devDependencies = _.get(
+        modulePkg,
+        'devDependencies',
+        _.get(modulePkg, 'devdependencies', '')
+      );
 
-    _.forIn(dependencies, (value, key) => {
-      depsSection.addData(capitalizeFirstLetter(key), value);
-    });
+      _.forIn(dependencies, (value, key) => {
+        depsSection.addData(capitalizeFirstLetter(key), value);
+      });
 
-    _.forIn(devDependencies, (value, key) => {
-      depsSection.addData(capitalizeFirstLetter(key), value);
-    });
+      _.forIn(devDependencies, (value, key) => {
+        depsSection.addData(capitalizeFirstLetter(key), value);
+      });
 
-    section.addData(depsSection);
+      section.addData(depsSection);
+    }
+  } catch (e) {
+    // do nothing if we can't find the deps
   }
 }
 
@@ -211,6 +250,18 @@ function addons() {
   }
 
   section.print();
+}
+
+function getNodeModulesDirNames() {
+  let nodeModulesPath = path.join(process.env.PWD, '/node_modules');
+  if (fs.existsSync(nodeModulesPath)) {
+    let modulesNames = [];
+    fs.readdirSync(nodeModulesPath).forEach(file => {
+      modulesNames.push(file);
+    });
+    return modulesNames;
+  }
+  return [];
 }
 
 function main() {
@@ -237,11 +288,14 @@ function main() {
       _.get(pkg, 'devdependencies', '')
     );
 
+    let nodeModuleList = getNodeModulesDirNames();
+
     for (let section in all_sections) {
       printSection(
         section,
         dependencies,
         devDependencies,
+        nodeModuleList,
         to_regex_map(all_sections[section])
       );
     }
