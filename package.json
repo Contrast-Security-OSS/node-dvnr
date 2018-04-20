@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/Contrast-Security-OSS/node-dvnr#readme",
   "dependencies": {
+    "commander": "^2.15.1",
     "get-installed-path": "^4.0.8",
     "lodash": "4.17.5"
   }
