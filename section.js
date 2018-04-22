@@ -32,6 +32,7 @@ class Section {
     depth = depth || 0;
 
     this.printHeader(depth);
+    this.data = new Set(this.data);
     this.data.forEach(data => {
       if (data instanceof Section) {
         data.print(depth + 1);
@@ -51,7 +52,17 @@ class Section {
   addData(name, val) {
     name instanceof Section
       ? this.data.push(name)
-      : this.data.push({ name, val });
+      : this.containsData(name) ? false : this.data.push({ name, val });
+  }
+
+  containsData(name) {
+    let found = false;
+    this.data.forEach(data => {
+      if (data.name === name) {
+        found = true;
+      }
+    });
+    return found;
   }
 
   writeToLog(data) {
@@ -61,8 +72,8 @@ class Section {
     try {
       fs.appendFileSync(`nvnr-${this.logFileName}.txt`, `${data}\n`);
     } catch (e) {
-      // this is in case we don't have permissions to write
-      // we don't want to crash, we can still get info from copy&paste email.
+      console.log('Unable to write report.');
+      throw e;
     }
   }
 }

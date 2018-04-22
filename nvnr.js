@@ -2,6 +2,7 @@
 'use strict';
 const os = require('os');
 const Section = require('./section.js').Section;
+const SearchList = require('./searchList').SearchList;
 const colors = require('./colors');
 const _ = require('lodash');
 const fs = require('fs');
@@ -11,106 +12,20 @@ const program = require('commander');
 class NodeDvnr {
   constructor(pkg, workingDir) {
     this.logFileName = this.determineFileName(pkg);
+    this.pkg = pkg;
     this.workingDirectory = workingDir;
-    this.loggingModules = ['bunyan', 'log4js', 'morgan', 'winston'];
-    this.httpFrameWorks = [
-      'angular',
-      'connect',
-      'express',
-      'hapi',
-      'koa',
-      'meteor',
-      'react',
-      'redux',
-      'sails'
-    ];
-    this.testFrameworks = [
-      'chai',
-      'espresso',
-      'jasmine-core',
-      'jasmine-node',
-      'jest',
-      'jsunit',
-      'mocha',
-      'nodeunit',
-      'should',
-      'vows'
-    ];
-    this.cms = ['apostrophe'];
-    this.daemonRunners = ['forever', 'nodemon', 'pm2', 'supervisor'];
-    this.taskRunners = ['ant', 'grunt', 'gulp'];
-    this.templateEngines = ['ejs', 'handlebars', 'jade', 'pug', 'swig'];
-    this.harmony = ['harmony', 'node-harmony'];
-    this.transpilers = [
-      'babel',
-      'coffeescript',
-      'coffee-script',
-      'typescript',
-      'standard'
-    ];
-    this.databases = [
-      'marsdb',
-      'mongodb',
-      'mongoose',
-      'mysql',
-      'redis',
-      'sequelize',
-      'sqlite'
-    ];
-    this.miscModules = [
-      'async',
-      'axios',
-      'bluebird',
-      'chalk',
-      'cheerio',
-      'commander',
-      'joi',
-      'jquery',
-      'lodash',
-      'moment',
-      'multer',
-      'notevil',
-      'nyc',
-      'passport',
-      'request',
-      'rxjs',
-      'through2',
-      'underscore',
-      'webpack',
-      'yargs',
-      'loopback'
-    ];
-    this.all_sections = {
-      'HTTP Frameworks': this.httpFrameWorks,
-      CMS: this.cms,
-      'Testing Frameworks': this.testFrameworks,
-      'Daemon Runners': this.daemonRunners,
-      'Task Runners': this.taskRunners,
-      'Template Engines': this.templateEngines,
-      Logging: this.loggingModules,
-      Transpilers: this.transpilers,
-      'ES6 Harmony': this.harmony,
-      Databases: this.databases,
-      Misc: this.miscModules
-    };
+    this.seen = [];
   }
 
-  searchDependencies(
-    dependencies,
-    devDependencies,
-    nodeModulesList,
-    logFileName,
-    workingDir
-  ) {
-    for (let sectionTitle in this.all_sections) {
+  searchDependencies(dependencies, devDependencies, nodeModulesList) {
+    const searchList = new SearchList();
+    for (let sectionTitle in searchList.all_sections) {
       this.printSection(
         sectionTitle,
         dependencies,
         devDependencies,
-        this.to_regex_map(this.all_sections[sectionTitle]),
-        nodeModulesList,
-        logFileName,
-        workingDir
+        to_regex_map(searchList.all_sections[sectionTitle]),
+        nodeModulesList
       );
     }
   }
@@ -119,12 +34,8 @@ class NodeDvnr {
     return _.get(pkg, 'name', 'default');
   }
 
-  capitalizeFirstLetter(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
-  }
-
-  printSystemInfo(logFileName) {
-    const sysInfo = new Section('General Info', logFileName);
+  printSystemInfo() {
+    const sysInfo = new Section('General Info', this.logFileName);
 
     const platform = `${process.platform} ${os.release()}`;
     const arch = os.arch();
@@ -145,7 +56,7 @@ class NodeDvnr {
     sysInfo.addData('mem', totalgb);
     sysInfo.addData('cwd', process.env.PWD);
 
-    const cpuInfo = new Section('cpu', logFileName);
+    const cpuInfo = new Section('cpu', this.logFileName);
     cpuInfo.addData('model', cpuModel);
     cpuInfo.addData('cores', cpuCores);
     cpuInfo.addData('speed', cpuSpeed);
@@ -163,97 +74,95 @@ class NodeDvnr {
     dependencies,
     devDependencies,
     search_map,
-    nodeModuleList,
-    logFileName,
-    workingDir
+    nodeModuleList
   ) {
-    const section = new Section(sectionTitle, logFileName);
-
-    let seen = [];
+    const section = new Section(sectionTitle, this.logFileName);
 
     [dependencies, devDependencies].forEach(dependency => {
       search_map.forEach(frameworkRegExp => {
-        _.forIn(dependency, (value, key) => {
-          if (key.search(frameworkRegExp) !== -1) {
-            let moduleName = this.capitalizeFirstLetter(key);
-            if (!seen.includes(moduleName)) {
-              section.addData(this.capitalizeFirstLetter(moduleName), value);
-              let path = this.getModulePath(workingDir, moduleName);
-              this.findModuleDeps(section, moduleName, path);
-              seen.push(moduleName.toLowerCase());
+        _.forIn(dependency, (version, name) => {
+          if (name.search(frameworkRegExp) !== -1) {
+            let moduleName = name.toLowerCase();
+            section.addData(capitalizeFirstLetter(moduleName), version);
+            let moduleDepsSection = this.createModuleDepsSection(moduleName);
+            if (moduleDepsSection != null) {
+              section.addData(moduleDepsSection);
             }
           }
         });
-        _.forIn(nodeModuleList, key => {
+        nodeModuleList.forEach(key => {
           if (key.search(frameworkRegExp) !== -1) {
-            let moduleName = this.capitalizeFirstLetter(key);
-            if (!seen.includes(moduleName)) {
-              section.addData(moduleName, '(Found in /node_modules)');
-            }
+            let moduleName = capitalizeFirstLetter(key.toLowerCase());
+            section.addData(moduleName, '(Found in /node_modules)');
           }
         });
       });
     });
-
     section.print();
   }
 
-  getModulePath(workingDirectory, moduleName) {
-    return path.resolve(
-      workingDirectory,
-      '/node_modules',
-      moduleName.toLowerCase()
-    );
-  }
-
-  findModuleDeps(section, module, path, logFileName) {
-    try {
-      let depsSection = new Section(`${module} Deps`, logFileName);
-      let modulePkg = require(path + '/package.json');
-      if (modulePkg) {
-        let dependencies = _.get(
-          modulePkg,
-          'dependencies',
-          _.get(modulePkg, 'Dependencies', '')
-        );
-        let devDependencies = _.get(
-          modulePkg,
-          'devDependencies',
-          _.get(modulePkg, 'devdependencies', '')
-        );
-
-        _.forIn(dependencies, (value, key) => {
-          depsSection.addData(this.capitalizeFirstLetter(key), value);
-        });
-
-        _.forIn(devDependencies, (value, key) => {
-          depsSection.addData(this.capitalizeFirstLetter(key), value);
-        });
-
-        section.addData(depsSection);
-      }
-    } catch (e) {
-      // do nothing if we can't find the deps
+  createModuleDepsSection(moduleName) {
+    if (!this.workingDirectory || !moduleName) {
+      return null;
     }
+    let modulePath = this.getModulePath(moduleName);
+    let moduleDeps = this.getModuleDeps(modulePath);
+    return this.createDepsSection(moduleName, moduleDeps);
   }
 
-  printBanner() {
-    const reportDate = new Date().toString();
-    console.log(
-      colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)')
+  createDepsSection(moduleName, moduleDeps) {
+    const moduleDepsSection = new Section(
+      `↪ ${moduleName} Deps`,
+      this.logFileName
     );
-    console.log(reportDate);
-    console.log();
+    _.forIn(moduleDeps, (moduleVersion, moduleName) => {
+      moduleDepsSection.addData(
+        capitalizeFirstLetter(moduleName),
+        moduleVersion
+      );
+    });
+    return moduleDepsSection;
   }
 
-  to_regex_map(strings) {
-    return strings.map(s => new RegExp(`${s}`, 'i'));
+  getModulePath(moduleName) {
+    return path.join(this.workingDirectory, '/node_modules', moduleName);
   }
 
-  printAddons(LogFileName) {
-    const section = new Section('Custom Addons (C++/V8)', LogFileName);
+  getModuleDeps(modulePath) {
+    let pkgPath = path.resolve(modulePath, 'package.json');
+    let modulePkg;
     try {
-      let data = fs.readFileSync('binding.gyp');
+      modulePkg = require(pkgPath);
+    } catch (e) {
+      return;
+    }
+    let allDeps = null;
+    if (modulePkg) {
+      allDeps = {};
+      let dependencies = _.get(
+        modulePkg,
+        'dependencies',
+        _.get(modulePkg, 'Dependencies', {})
+      );
+      let devDependencies = _.get(
+        modulePkg,
+        'devDependencies',
+        _.get(modulePkg, 'devdependencies', {})
+      );
+      [dependencies, devDependencies].forEach(dependency => {
+        _.forIn(dependency, (version, name) => {
+          allDeps[name] = version;
+        });
+      });
+    }
+    return allDeps;
+  }
+
+  printAddons() {
+    const section = new Section('Custom Addons (C++/V8)', this.logFileName);
+    try {
+      let path = path.resolve(this.workingDirectory, 'binding.gyp');
+      let data = fs.readFileSync(path);
       if (data != null) {
         section.addData('Binding.gyp', data.toString());
       }
@@ -264,9 +173,12 @@ class NodeDvnr {
     section.print();
   }
 
-  printNpmScripts(pkg, logFileName) {
-    let npmScriptsSection = new Section('Package.json Scripts', logFileName);
-    let scripts = _.get(pkg, 'scripts', null);
+  printNpmScripts() {
+    let npmScriptsSection = new Section(
+      'Package.json Scripts',
+      this.logFileName
+    );
+    let scripts = _.get(this.pkg, 'scripts', null);
 
     if (scripts != null) {
       _.forIn(scripts, (value, key) => {
@@ -278,6 +190,10 @@ class NodeDvnr {
   }
 }
 
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function getNodeModulesDirNames(workDir) {
   let nodeModulesPath = path.join(workDir + '/node_modules');
   if (fs.existsSync(nodeModulesPath)) {
@@ -285,9 +201,19 @@ function getNodeModulesDirNames(workDir) {
     fs.readdirSync(nodeModulesPath).forEach(file => {
       modulesNames.push(file);
     });
-    return modulesNames;
+    return new Set(modulesNames);
   }
   return [];
+}
+
+function printBanner() {
+  const reportDate = new Date().toString();
+  console.log(colors.cyan('contrast nvnr (https://www.contrastsecurity.com/)'));
+  console.log(reportDate);
+  console.log();
+}
+function to_regex_map(strings) {
+  return strings.map(s => new RegExp(`${s}`, 'i'));
 }
 
 function main(inputPath) {
@@ -304,11 +230,12 @@ function main(inputPath) {
   }
 
   try {
-    pkg = require(workingDirectory + '/package.json');
+    let pkgPath = path.resolve(workingDirectory, 'package.json');
+    pkg = require(pkgPath);
   } catch (e) {
     console.log(
-      `Could not read package.json. To fully check compatibility, make sure to run nvnr with the same directory as your application's package.json.\n` +
-        `Searched for package.json in ${workingDirectory}`
+      `Could not read package.json. To generate a report, make sure to run nvnr within the same directory as your application's package.json.\n` +
+        `You can also use the -p flag to specify a path instead.\nSearched for package.json in ${workingDirectory}`
     );
   }
 
@@ -316,10 +243,6 @@ function main(inputPath) {
     let nodeModuleList = getNodeModulesDirNames(workingDirectory);
     let Dvnr = new NodeDvnr(pkg, workingDirectory);
     let logFileName = Dvnr.logFileName;
-    console.log(logFileName);
-
-    Dvnr.printBanner();
-    Dvnr.printSystemInfo(logFileName);
 
     let dependencies = _.get(
       pkg,
@@ -332,20 +255,16 @@ function main(inputPath) {
       _.get(pkg, 'devdependencies', '')
     );
 
-    Dvnr.printNpmScripts(pkg, logFileName);
+    printBanner();
+    Dvnr.printSystemInfo();
+    Dvnr.printNpmScripts();
 
-    Dvnr.searchDependencies(
-      dependencies,
-      devDependencies,
-      nodeModuleList,
-      logFileName,
-      workingDirectory
-    );
-    Dvnr.printAddons(logFileName);
+    Dvnr.searchDependencies(dependencies, devDependencies, nodeModuleList);
+    Dvnr.printAddons();
 
     if (fs.existsSync(`nvnr-${logFileName}.txt`)) {
       console.log(
-        `\nWrote Compatibility Report to nvnr-${logFileName}.txt to ${workingDirectory}`
+        `\nWrote report to nvnr-${logFileName}.txt to ${process.env.PWD}`
       );
     }
   }
