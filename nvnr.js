@@ -134,21 +134,13 @@ class NodeDvnr {
     try {
       modulePkg = require(pkgPath);
     } catch (e) {
-      return;
+      return null;
     }
     let allDeps = null;
     if (modulePkg) {
-      allDeps = {};
-      let dependencies = _.get(
-        modulePkg,
-        'dependencies',
-        _.get(modulePkg, 'Dependencies', {})
-      );
-      let devDependencies = _.get(
-        modulePkg,
-        'devDependencies',
-        _.get(modulePkg, 'devdependencies', {})
-      );
+      let all_deps = getDependencies(modulePkg);
+      let dependencies = all_deps[0];
+      let devDependencies = all_deps[1];
       [dependencies, devDependencies].forEach(dependency => {
         _.forIn(dependency, (version, name) => {
           allDeps[name] = version;
@@ -216,6 +208,16 @@ function to_regex_map(strings) {
   return strings.map(s => new RegExp(`${s}`, 'i'));
 }
 
+function getDependencies(pkg) {
+  let dependencies = _.get(pkg, 'dependencies', _.get(pkg, 'Dependencies', ''));
+  let devDependencies = _.get(
+    pkg,
+    'devDependencies',
+    _.get(pkg, 'devdependencies', '')
+  );
+  return [dependencies, devDependencies];
+}
+
 function main(inputPath) {
   let pkg;
   let workingDirectory;
@@ -243,18 +245,9 @@ function main(inputPath) {
     let nodeModuleList = getNodeModulesDirNames(workingDirectory);
     let Dvnr = new NodeDvnr(pkg, workingDirectory);
     let logFileName = Dvnr.logFileName;
-
-    let dependencies = _.get(
-      pkg,
-      'dependencies',
-      _.get(pkg, 'Dependencies', '')
-    );
-    let devDependencies = _.get(
-      pkg,
-      'devDependencies',
-      _.get(pkg, 'devdependencies', '')
-    );
-
+    let all_deps = getDependencies(pkg);
+    let dependencies = all_deps[0];
+    let devDependencies = all_deps[1];
     printBanner();
     Dvnr.printSystemInfo();
     Dvnr.printNpmScripts();
