@@ -210,11 +210,11 @@ function to_regex_map(strings) {
 }
 
 function getDependencies(pkg) {
-  let dependencies = _.get(pkg, 'dependencies', _.get(pkg, 'Dependencies', ''));
+  let dependencies = _.get(pkg, 'dependencies', _.get(pkg, 'Dependencies', {}));
   let devDependencies = _.get(
     pkg,
     'devDependencies',
-    _.get(pkg, 'devdependencies', '')
+    _.get(pkg, 'devdependencies', {})
   );
   return [dependencies, devDependencies];
 }
