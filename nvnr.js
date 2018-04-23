@@ -138,6 +138,7 @@ class NodeDvnr {
     }
     let allDeps = null;
     if (modulePkg) {
+      allDeps = {};
       let all_deps = getDependencies(modulePkg);
       let dependencies = all_deps[0];
       let devDependencies = all_deps[1];
