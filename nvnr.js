@@ -266,10 +266,7 @@ function main(inputPath) {
 
 program
   .version('1.0.0')
-  .usage(
-    '[options] <path> -- path is optional. Without path option will run in current directory.'
-  )
-  .option('-p', '--path', "Path to project's root directory with package.json")
+  .option('-p, --path', "Path to project's root directory with package.json")
   .action((dir, cmd) => {
     main(dir);
   })
