@@ -4,14 +4,12 @@ const tab = '  ';
 const fs = require('fs');
 let currentMessage = 1;
 
-let file_ts = Date.now();
-
 class Section {
-  constructor(msg, packages) {
+  constructor(msg, logFileName) {
     this.header = msg;
-    this.packages = packages;
     this.data = [];
     this.subsections = [];
+    this.logFileName = logFileName;
   }
 
   printHeader(depth) {
@@ -27,7 +25,6 @@ class Section {
       header += ':';
     }
 
-    console.log(header);
     this.writeToLog(`${currentMessage}. ${this.header}:\n`);
   }
 
@@ -35,6 +32,7 @@ class Section {
     depth = depth || 0;
 
     this.printHeader(depth);
+    this.data = new Set(this.data);
     this.data.forEach(data => {
       if (data instanceof Section) {
         data.print(depth + 1);
@@ -46,7 +44,6 @@ class Section {
         print += data.name + ':';
         print += tab;
         print += data.val;
-        console.log(print);
         this.writeToLog(print);
       }
     });
@@ -55,7 +52,17 @@ class Section {
   addData(name, val) {
     name instanceof Section
       ? this.data.push(name)
-      : this.data.push({ name, val });
+      : this.containsData(name) ? false : this.data.push({ name, val });
+  }
+
+  containsData(name) {
+    let found = false;
+    this.data.forEach(data => {
+      if (data.name === name) {
+        found = true;
+      }
+    });
+    return found;
   }
 
   writeToLog(data) {
@@ -63,15 +70,14 @@ class Section {
       return;
     }
     try {
-      fs.appendFileSync(`nvnr-${file_ts}.txt`, `${data}\n`);
+      fs.appendFileSync(`nvnr-${this.logFileName}.txt`, `${data}\n`);
     } catch (e) {
-      // this is in case we don't have permissions to write
-      // we don't want to crash, we can still get info from copy&paste email.
+      console.log('Unable to write report.');
+      throw e;
     }
   }
 }
 
 module.exports = {
-  Section,
-  file_ts
+  Section
 };
